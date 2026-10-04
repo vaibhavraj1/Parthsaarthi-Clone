@@ -107,7 +107,7 @@ export default function MentorReleasesPage() {
   const openEditModal = (rel: ReleaseRow) => {
     setEditTarget(rel);
     setEditTitle(rel.title);
-    setEditDescription(rel.description);
+    setEditDescription(rel.description || '');
     setEditCategory(rel.category || '');
     // format date & time for HTML inputs
     const relDate = new Date(rel.releaseAt);
