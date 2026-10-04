@@ -54,7 +54,7 @@ export default function LoginPage() {
               <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                 Senior Batch Mentor
               </span>
-              <h2 className="text-lg font-bold text-slate-900 mt-1">Rahul Sharma</h2>
+              <h2 className="text-lg font-bold text-slate-900 mt-1">Gayathri Arvind</h2>
               <p className="text-xs text-slate-500">SIP Mentor • Consulting Focus</p>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">

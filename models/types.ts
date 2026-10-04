@@ -10,12 +10,48 @@ export interface User {
 
 export type ReleaseStatus = 'scheduled' | 'open' | 'manually_released' | 'cancelled' | 'completed';
 
+export type SlotType = 'case' | 'cv_hr';
+export type SlotMode = 'Online' | 'Offline';
+export type CvHrOption = 'Entire CV' | 'Workex' | 'POR' | 'HR Questions';
+
+export interface ShadowBooking {
+  studentId: string;
+  studentName: string;
+  bookedAt: string;
+}
+
+export interface Slot {
+  _id: string;
+  releaseId: string;
+  startTime: string; // 24-hr format "HH:mm", e.g. "14:00"
+  endTime: string;   // 24-hr format "HH:mm", e.g. "14:30"
+  mode: SlotMode;
+  slotType: SlotType;
+  
+  // Case Slot properties
+  shadowCount?: number; // configured by mentor (0 to 15)
+  solverBooked?: boolean;
+  solverStudentId?: string;
+  solverStudentName?: string;
+  shadowsBooked?: ShadowBooking[];
+
+  // CV/HR Slot properties
+  cvHrSelection?: CvHrOption; // choice picked by student during booking
+
+  location?: string;
+  note?: string;
+  isBooked?: boolean;
+  bookedBy?: string;
+  bookedStudentId?: string;
+  createdAt: string;
+}
+
 export interface Release {
   _id: string;
   mentorId: string;
   mentorName: string;
   title: string;
-  description: string;
+  description?: string;
   category?: string;
   releaseAt: string; // ISO 8601 UTC string
   status: ReleaseStatus;
@@ -25,24 +61,20 @@ export interface Release {
   cancelledAt?: string;
 }
 
-export interface Slot {
-  _id: string;
-  releaseId: string;
-  startTime: string; // e.g. "03:00 PM"
-  endTime: string;   // e.g. "03:30 PM"
-  mode?: string;      // e.g. "Online (Google Meet)" or "Offline (SR-102)"
-  location?: string;
-  note?: string;
-  isBooked?: boolean;
-  bookedBy?: string;
-  createdAt: string;
-}
-
 export interface Booking {
   _id: string;
   slotId: string;
+  releaseId: string;
   studentId: string;
-  studentName?: string;
+  studentName: string;
+  mentorName: string;
+  title?: string;
+  startTime: string;
+  endTime: string;
+  mode: SlotMode;
+  slotType: SlotType;
+  bookingRole?: 'solver' | 'shadow';
+  cvHrSelection?: CvHrOption;
   bookedAt: string;
 }
 

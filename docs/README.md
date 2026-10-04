@@ -24,7 +24,7 @@ In the existing Parthsaarthi system:
 To deliver a robust, pitch-ready prototype without overengineering:
 - **Scope Starts At**: The mentor creating and scheduling a release with multiple individual slots and an authoritative release timestamp.
 - **Scope Ends At**: The scheduled time passing and the student's `[ BOOK NOW ]` buttons transitioning from disabled/locked to enabled/actionable upon page refresh.
-- **Integration Boundary**: When an enabled `[ BOOK NOW ]` button is clicked, the application triggers a simulated modal demonstrating the seamless handoff back to the existing Parthsaarthi booking workflow (FCFS reservation, Google Meet link, and student calendar sync).
+- **Booking Flow**: When an enabled `[ BOOK NOW ]` button is clicked, students choose a case role or CV/HR focus area and complete the booking in the application.
 - **Explicitly Out of Scope**:
   - Payment gateways
   - Chat/messaging infrastructure
@@ -48,8 +48,8 @@ To deliver a robust, pitch-ready prototype without overengineering:
    - Preserves mentor autonomy. If circumstances require early release or if an urgent update occurs, the mentor can trigger **Manual Release** via a confirmation dialog.
 6. **Cancellation Immunity (Rule 7)**:
    - Cancelled releases are permanently safeguarded and will never unlock even if their original scheduled release timestamp has elapsed.
-7. **Demo Simulation Controls**:
-   - A dedicated floating review panel allowing interviewers/pitch evaluators to fast-forward release timing without waiting for real clock time.
+7. **Slot-Type Booking Choices**:
+   - Case slots offer one Solver spot and the mentor-configured number of Shadow spots; CV/HR focus is selected by the student during booking.
 
 ---
 
@@ -79,9 +79,13 @@ flowchart TD
     D --> E[Preview Individual Slot Cards: BOOK NOW Disabled]
     E --> F[Countdown Reaches 0 / Student Refreshes]
     C -->|No: Open| G[Status transitions to OPEN]
-    G --> H[BOOK NOW Buttons Enabled]
-    H --> I[Click BOOK NOW]
-    I --> J[Handoff Modal: Continuing to Parthsaarthi Booking Flow...]
+   G --> H[BOOK NOW Buttons Enabled]
+   H --> I[Click BOOK NOW]
+   I --> J{Slot Type?}
+   J -->|Case| K[Choose Solver or Shadow]
+   J -->|CV/HR| L[Choose Focus Area]
+   K --> M[Complete Booking]
+   L --> M
 ```
 
 ---
@@ -107,8 +111,8 @@ flowchart TD
 │  - ReleaseCard           │  - POST /api/releases       │
 │  - Countdown             │  - GET /api/student/releases│
 │  - StatusBadge           │  - POST /api/releases/[id]/ │
-│  - DemoControls          │         manual-release      │
-│  - DemoBookingModal      │  - POST /api/bookings       │
+│  - BookingModal          │         manual-release      │
+│  - MentorReleaseForm     │  - POST /api/bookings       │
 └────────────┬─────────────┴──────────────┬──────────────┘
              │                            │
              │ Fetch on page load/refresh │
@@ -140,8 +144,8 @@ This guarantees sub-second mathematical correctness with zero background cron wo
 ```typescript
 interface Release {
   _id: string;               // e.g. "rel_x89f2a"
-  mentorId: string;          // e.g. "mentor_rahul"
-  mentorName: string;        // "Rahul Sharma"
+   mentorId: string;          // "mentor_pgp41"
+   mentorName: string;        // "Gayathri Arvind"
   title: string;             // "Consulting Case Preparation"
   description: string;       // Guidance / prerequisites
   category?: string;         // "Management Consulting"
@@ -186,7 +190,7 @@ interface Booking {
 ## 9. Authentication Approach
 - **Prototype Implementation**: Lightweight persona switcher accessible from `/login` or the navigation bar.
 - **Roles**:
-  - `Mentor Demo` (Rahul Sharma)
+   - `Mentor Demo` (Gayathri Arvind)
   - `Student Demo` (Vaibhav Raj Sahni)
 - **Campus Alignment**: Clearly labeled with a "Demo Environment" banner. In production, this authentication boundary integrates cleanly with IIM Lucknow's Microsoft Office 365 / Google Workspace SSO.
 
@@ -209,11 +213,8 @@ interface Booking {
 | `PATCH`| `/api/releases/[id]` | Update title, description, category, or releaseAt. |
 | `POST` | `/api/releases/[id]/manual-release` | Trigger manual release fallback immediately. |
 | `POST` | `/api/releases/[id]/cancel` | Cancel release (safeguarded against future unlock). |
-| `POST` | `/api/releases/[id]/simulate-release` | Demo simulation: fast-forwards release timer to past. |
-| `POST` | `/api/releases/simulate-all` | Demo simulation: fast-forwards all scheduled releases. |
 | `GET` | `/api/student/releases` | Authoritative student view with bookable flags. |
-| `POST` | `/api/bookings` | Atomic slot booking with server-side time verification. |
-| `POST` | `/api/demo/reset` | Seed Consulting Case Prep demo session or reset DB. |
+| `POST` | `/api/bookings` | Slot-type booking with server-side time and choice validation. |
 
 ---
 

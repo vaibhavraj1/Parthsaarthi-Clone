@@ -2,19 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import {
-  Calendar,
-  Clock,
-  Sparkles,
-  ArrowRight,
-  ShieldCheck,
-  CheckCircle2,
-  Users,
-  Layers,
-  GraduationCap,
-  Play,
-  RotateCcw,
-} from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 export default function HomePage() {
   return (
@@ -140,12 +128,12 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
             <div className="text-xs font-bold text-blue-700 uppercase">Step 1</div>
             <div className="text-sm font-bold text-slate-900">Schedule Release</div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Go to <Link href="/mentor/create" className="text-blue-600 underline font-semibold">Schedule Release</Link>. Add 4 slots (3:00, 3:30, 4:00, 4:30) and set release time +3 mins.
+              Go to <Link href="/mentor/create" className="text-blue-600 underline font-semibold">Schedule Release</Link>. Add slots and set a release time a few minutes ahead.
             </p>
           </div>
 
@@ -158,18 +146,10 @@ export default function HomePage() {
           </div>
 
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-            <div className="text-xs font-bold text-amber-700 uppercase">Step 3</div>
-            <div className="text-sm font-bold text-slate-900">Simulate Release</div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              In the floating <strong>Demo Controls</strong> (bottom right), click <em>Simulate Release Now</em> to fast-forward server time.
-            </p>
-          </div>
-
-          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-            <div className="text-xs font-bold text-emerald-700 uppercase">Step 4</div>
+            <div className="text-xs font-bold text-emerald-700 uppercase">Step 3</div>
             <div className="text-sm font-bold text-slate-900">Refresh & Book</div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Refresh the Student page. The slots turn <strong>OPEN</strong>. Click <code>[ BOOK NOW ]</code> to see Parthsaarthi booking handoff.
+              After the release time, refresh and click <code>[ BOOK NOW ]</code>. Choose Solver or Shadow for a case slot, or a CV/HR focus area, then complete booking.
             </p>
           </div>
         </div>

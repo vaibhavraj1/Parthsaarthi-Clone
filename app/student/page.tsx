@@ -1,16 +1,22 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { ReleaseWithSlots, Slot } from '@/models/types';
+import { Booking, CvHrOption, ReleaseWithSlots, Slot } from '@/models/types';
 import { ReleaseCard } from '@/components/ReleaseCard';
-import { DemoBookingModal } from '@/components/DemoBookingModal';
-import { RefreshCw, Sparkles, AlertCircle, Info, Calendar } from 'lucide-react';
+import { BookingModal } from '@/components/BookingModal';
+import { RefreshCw, AlertCircle, Info, Calendar } from 'lucide-react';
+
+const STUDENT_ID = 'student_vaibhav';
+const STUDENT_NAME = 'Vaibhav Raj Sahni';
 
 export default function StudentPage() {
   const [releases, setReleases] = useState<ReleaseWithSlots[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [serverTime, setServerTime] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [loadingBookings, setLoadingBookings] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeView, setActiveView] = useState<'upcoming' | 'booked'>('upcoming');
   const [error, setError] = useState<string | null>(null);
 
   // Booking modal state
@@ -37,9 +43,25 @@ export default function StudentPage() {
     }
   }, []);
 
+  const fetchBookings = useCallback(async (isSilent = false) => {
+    if (!isSilent) setRefreshing(true);
+    try {
+      const res = await fetch(`/api/bookings?studentId=${STUDENT_ID}`);
+      if (!res.ok) throw new Error('Failed to load your booked slots');
+      const data = await res.json();
+      setBookings(data.bookings || []);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load your booked slots');
+    } finally {
+      setLoadingBookings(false);
+      if (!isSilent) setRefreshing(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchReleases(false);
-  }, [fetchReleases]);
+    fetchBookings(true);
+  }, [fetchBookings, fetchReleases]);
 
   const handleBookSlot = (slot: Slot, release: ReleaseWithSlots) => {
     setSelectedSlot(slot);
@@ -47,14 +69,18 @@ export default function StudentPage() {
     setIsModalOpen(true);
   };
 
-  const handleConfirmBooking = async (slotId: string) => {
+  const handleConfirmBooking = async (params: {
+    slotId: string;
+    bookingRole?: 'solver' | 'shadow';
+    cvHrSelection?: CvHrOption;
+  }) => {
     const res = await fetch('/api/bookings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        slotId,
-        studentId: 'student_vaibhav',
-        studentName: 'Vaibhav Raj Sahni',
+        ...params,
+        studentId: STUDENT_ID,
+        studentName: STUDENT_NAME,
       }),
     });
 
@@ -64,7 +90,7 @@ export default function StudentPage() {
     }
 
     // Refresh releases so the slot appears booked
-    fetchReleases(true);
+    await Promise.all([fetchReleases(true), fetchBookings(true)]);
   };
 
   return (
@@ -80,23 +106,20 @@ export default function StudentPage() {
               <span className="text-xs text-slate-400">•</span>
               <span className="text-xs text-slate-500">IIM Lucknow Student Portal</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              Upcoming Mentoring Releases
-            </h1>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Mentoring Slots</h1>
             <p className="text-sm text-slate-600 max-w-2xl leading-relaxed">
-              Mentoring and SIP consultation slots are released at predetermined, scheduled times.
-              Slots remain locked until their exact release timestamp. Refresh this page once the countdown completes.
+              Browse upcoming releases or review the mentoring slots you have reserved.
             </p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 self-start md:self-auto">
             <button
-              onClick={() => fetchReleases(false)}
+              onClick={() => activeView === 'upcoming' ? fetchReleases(false) : fetchBookings()}
               disabled={refreshing}
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-              <span>{refreshing ? 'Checking Server...' : 'Refresh Slots Status'}</span>
+              <span>{refreshing ? 'Refreshing...' : activeView === 'upcoming' ? 'Refresh Slots' : 'Refresh Bookings'}</span>
             </button>
           </div>
         </div>
@@ -113,6 +136,31 @@ export default function StudentPage() {
         </div>
       </div>
 
+      <div role="tablist" aria-label="Mentoring slot views" className="inline-flex p-1 bg-slate-100 border border-slate-200 rounded-lg">
+        <button
+          type="button"
+          role="tab"
+          id="upcoming-tab"
+          aria-controls="upcoming-panel"
+          aria-selected={activeView === 'upcoming'}
+          onClick={() => setActiveView('upcoming')}
+          className={`px-4 py-2 text-xs font-semibold rounded-md transition-colors ${activeView === 'upcoming' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+        >
+          Upcoming <span className="ml-1.5 text-[11px] text-slate-500">{releases.length}</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="booked-tab"
+          aria-controls="booked-panel"
+          aria-selected={activeView === 'booked'}
+          onClick={() => setActiveView('booked')}
+          className={`px-4 py-2 text-xs font-semibold rounded-md transition-colors ${activeView === 'booked' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+        >
+          Booked Slots <span className="ml-1.5 text-[11px] text-slate-500">{bookings.length}</span>
+        </button>
+      </div>
+
       {/* Error Notice */}
       {error && (
         <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 text-sm flex items-center justify-between">
@@ -121,7 +169,7 @@ export default function StudentPage() {
             <span>{error}</span>
           </div>
           <button
-            onClick={() => fetchReleases(false)}
+            onClick={() => activeView === 'upcoming' ? fetchReleases(false) : fetchBookings()}
             className="text-xs font-bold underline hover:text-rose-950"
           >
             Retry
@@ -129,48 +177,78 @@ export default function StudentPage() {
         </div>
       )}
 
-      {/* Loading Skeleton */}
-      {loading ? (
-        <div className="space-y-6">
-          {[1, 2].map((i) => (
-            <div key={i} className="bg-white rounded-2xl border border-slate-200 p-6 animate-pulse space-y-4">
-              <div className="h-4 bg-slate-200 rounded w-1/4" />
-              <div className="h-6 bg-slate-200 rounded w-1/2" />
-              <div className="h-4 bg-slate-200 rounded w-3/4" />
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-4">
-                {[1, 2, 3, 4].map((j) => (
-                  <div key={j} className="h-28 bg-slate-100 rounded-xl border border-slate-200" />
-                ))}
-              </div>
+      {activeView === 'booked' ? (
+        <section id="booked-panel" role="tabpanel" aria-labelledby="booked-tab" className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          {loadingBookings ? (
+            <p className="px-6 py-5 text-sm text-slate-500">Loading booked slots...</p>
+          ) : bookings.length === 0 ? (
+            <p className="px-6 py-5 text-sm text-slate-500">You have no booked slots yet.</p>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {bookings.map((booking) => (
+                <article key={booking._id} className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-sm font-semibold text-slate-900">{booking.title || 'Mentoring Session'}</h2>
+                    <p className="text-xs text-slate-500 mt-1">Mentor: {booking.mentorName}</p>
+                  </div>
+                  <div className="sm:text-right">
+                    <p className="text-sm font-semibold text-slate-800">{booking.startTime} – {booking.endTime}</p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {booking.mode} · {booking.slotType === 'case'
+                        ? booking.bookingRole === 'solver' ? 'Solver' : 'Shadow'
+                        : booking.cvHrSelection || 'CV / HR'}
+                    </p>
+                  </div>
+                </article>
+              ))}
             </div>
-          ))}
-        </div>
-      ) : releases.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-4">
-          <div className="w-12 h-12 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mx-auto">
-            <Calendar className="w-6 h-6" />
-          </div>
-          <h3 className="text-lg font-bold text-slate-800">No Mentoring Releases Scheduled</h3>
-          <p className="text-sm text-slate-500 max-w-md mx-auto">
-            There are currently no scheduled mentoring sessions. Use the Demo Controls below to seed
-            a sample session or switch to Mentor view to schedule one.
-          </p>
-        </div>
+          )}
+        </section>
       ) : (
-        <div className="space-y-6">
-          {releases.map((release) => (
-            <ReleaseCard
-              key={release._id}
-              release={release}
-              onBookSlot={handleBookSlot}
-              onRefresh={() => fetchReleases(true)}
-            />
-          ))}
+        <div id="upcoming-panel" role="tabpanel" aria-labelledby="upcoming-tab">
+          {loading ? (
+            <div className="space-y-6">
+              {[1, 2].map((i) => (
+                <div key={i} className="bg-white rounded-2xl border border-slate-200 p-6 animate-pulse space-y-4">
+                  <div className="h-4 bg-slate-200 rounded w-1/4" />
+                  <div className="h-6 bg-slate-200 rounded w-1/2" />
+                  <div className="h-4 bg-slate-200 rounded w-3/4" />
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-4">
+                    {[1, 2, 3, 4].map((j) => (
+                      <div key={j} className="h-28 bg-slate-100 rounded-xl border border-slate-200" />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : releases.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-4">
+              <div className="w-12 h-12 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mx-auto">
+                <Calendar className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-800">No Mentoring Releases Scheduled</h3>
+              <p className="text-sm text-slate-500 max-w-md mx-auto">
+                There are currently no scheduled mentoring sessions. Switch to the mentor profile to create one.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {releases.map((release) => (
+                <ReleaseCard
+                  key={release._id}
+                  release={release}
+                  onBookSlot={handleBookSlot}
+                  onRefresh={() => fetchReleases(true)}
+                  currentStudentId={STUDENT_ID}
+                  currentStudentName={STUDENT_NAME}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Booking Flow Simulated Modal */}
-      <DemoBookingModal
+      <BookingModal
         slot={selectedSlot}
         releaseTitle={selectedRelease?.title}
         mentorName={selectedRelease?.mentorName}

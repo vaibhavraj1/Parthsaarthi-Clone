@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Navbar } from '@/components/Navbar';
-import { DemoControls } from '@/components/DemoControls';
 
 export const metadata: Metadata = {
   title: 'Parthsaarthi — Scheduled Slot Release | IIM Lucknow',
@@ -21,7 +20,6 @@ export default function RootLayout({
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {children}
         </main>
-        <DemoControls />
         <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
           <div className="max-w-7xl mx-auto px-4 space-y-1">
             <p className="font-semibold text-slate-700">

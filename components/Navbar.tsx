@@ -4,25 +4,29 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { formatTimeIST } from '@/lib/time-utils';
-import { Calendar, User, Clock, ArrowRightLeft, Sparkles, GraduationCap } from 'lucide-react';
+import { User, Clock, ArrowRightLeft } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
   const [currentIST, setCurrentIST] = useState<string>('');
   const [currentRole, setCurrentRole] = useState<'student' | 'mentor'>('student');
-  const [userName, setUserName] = useState<string>('Vaibhav Raj Sahni');
+  const pageRole = pathname.startsWith('/mentor')
+    ? 'mentor'
+    : pathname.startsWith('/student')
+    ? 'student'
+    : currentRole;
 
-  // Load session/role from cookie or localStorage
+  // Keep the active profile aligned with the page, even when reached through a direct link.
   useEffect(() => {
-    const role = localStorage.getItem('parthsaarthi_demo_role') as 'student' | 'mentor';
-    if (role === 'mentor') {
-      setCurrentRole('mentor');
-      setUserName('Rahul Sharma');
-    } else {
-      setCurrentRole('student');
-      setUserName('Vaibhav Raj Sahni');
-    }
+    const savedRole = localStorage.getItem('parthsaarthi_demo_role');
+    const role = pathname.startsWith('/mentor')
+      ? 'mentor'
+      : pathname.startsWith('/student')
+      ? 'student'
+      : savedRole === 'mentor' ? 'mentor' : 'student';
+    setCurrentRole(role);
+    localStorage.setItem('parthsaarthi_demo_role', role);
 
     const updateClock = () => {
       setCurrentIST(formatTimeIST(new Date()));
@@ -36,10 +40,8 @@ export const Navbar: React.FC = () => {
     localStorage.setItem('parthsaarthi_demo_role', newRole);
     setCurrentRole(newRole);
     if (newRole === 'mentor') {
-      setUserName('Rahul Sharma');
       router.push('/mentor/releases');
     } else {
-      setUserName('Vaibhav Raj Sahni');
       router.push('/student');
     }
   };
@@ -91,57 +93,26 @@ export const Navbar: React.FC = () => {
               </div>
             </Link>
 
-            {/* Navigation Links */}
-            <nav className="hidden md:flex items-center gap-1 ml-8">
-              <Link
-                href="/student"
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  pathname === '/student'
-                    ? 'bg-blue-50 text-blue-800 font-semibold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                Student View
-              </Link>
-              <Link
-                href="/mentor/releases"
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  pathname === '/mentor/releases'
-                    ? 'bg-blue-50 text-blue-800 font-semibold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                Scheduled Releases
-              </Link>
-              <Link
-                href="/mentor/create"
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  pathname === '/mentor/create'
-                    ? 'bg-blue-50 text-blue-800 font-semibold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                + Schedule Release
-              </Link>
-            </nav>
           </div>
 
           {/* User Role Switcher & Profile */}
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex flex-col text-right">
-              <span className="text-xs font-semibold text-slate-900">{userName}</span>
+              <span className="text-xs font-semibold text-slate-900">
+                {pageRole === 'mentor' ? 'Gayathri Arvind' : 'Vaibhav Raj Sahni'}
+              </span>
               <span className="text-[11px] text-slate-500 capitalize">
-                {currentRole === 'mentor' ? 'Senior Mentor' : 'Junior Batch (580)'}
+                {pageRole === 'mentor' ? 'Senior Mentor' : 'Junior Student'}
               </span>
             </div>
 
             <button
-              onClick={() => switchRole(currentRole === 'mentor' ? 'student' : 'mentor')}
+              onClick={() => switchRole(pageRole === 'mentor' ? 'student' : 'mentor')}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg border border-slate-300 transition-colors"
               title="Toggle between Student and Mentor persona"
             >
               <ArrowRightLeft className="w-3.5 h-3.5 text-slate-600" />
-              <span>Switch to {currentRole === 'mentor' ? 'Student' : 'Mentor'}</span>
+              <span>Switch to {pageRole === 'mentor' ? 'Student' : 'Mentor'}</span>
             </button>
 
             <Link

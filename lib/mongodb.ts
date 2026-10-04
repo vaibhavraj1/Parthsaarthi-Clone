@@ -1,4 +1,4 @@
-import { MongoClient, Db, Collection } from 'mongodb';
+import { MongoClient } from 'mongodb';
 
 /**
  * MongoDB client singleton for Next.js App Router.
@@ -39,8 +39,13 @@ class InMemoryCollection {
   async find(query: any = {}) {
     let result = this.items.filter((item) => {
       for (const key of Object.keys(query)) {
-        if (query[key] !== undefined && item[key] !== query[key]) {
-          return false;
+        if (query[key] !== undefined) {
+          // If query[key] is an object with $in
+          if (typeof query[key] === 'object' && query[key] !== null && Array.isArray(query[key].$in)) {
+            if (!query[key].$in.includes(item[key])) return false;
+          } else if (item[key] !== query[key]) {
+            return false;
+          }
         }
       }
       return true;
@@ -72,7 +77,7 @@ class InMemoryCollection {
       }
       return true;
     });
-    return found ? { ...found } : null;
+    return found ? JSON.parse(JSON.stringify(found)) : null;
   }
 
   async insertOne(doc: any) {
@@ -112,6 +117,14 @@ class InMemoryCollection {
     if (update.$set) {
       this.items[idx] = { ...this.items[idx], ...update.$set };
     }
+    if (update.$push) {
+      for (const pushKey of Object.keys(update.$push)) {
+        if (!Array.isArray(this.items[idx][pushKey])) {
+          this.items[idx][pushKey] = [];
+        }
+        this.items[idx][pushKey].push(update.$push[pushKey]);
+      }
+    }
     return { matchedCount: 1, modifiedCount: 1 };
   }
 
@@ -139,11 +152,15 @@ class InMemoryCollection {
     const initialLen = this.items.length;
     global._inMemoryDb![this.collectionName] = this.items.filter((item) => {
       for (const key of Object.keys(filter)) {
-        if (filter[key] !== undefined && item[key] !== filter[key]) {
-          return true;
+        if (filter[key] !== undefined) {
+          if (typeof filter[key] === 'object' && filter[key] !== null && Array.isArray(filter[key].$in)) {
+            if (filter[key].$in.includes(item[key])) return false;
+          } else if (item[key] === filter[key]) {
+            return false;
+          }
         }
       }
-      return false;
+      return true;
     });
     return { deletedCount: initialLen - this.items.length };
   }
@@ -170,74 +187,66 @@ let _isSeeded = false;
 async function ensureSeed(db: any) {
   if (_isSeeded) return;
   try {
-    const existing = await db.collection('releases').findOne({});
-    if (!existing) {
-      const now = new Date();
-      const releaseAt = new Date(now.getTime() + 3 * 60 * 1000).toISOString();
-      const releaseId = 'demo_consulting_01';
+    // Purge any legacy hardcoded demo releases/slots/bookings if present
+    await db.collection('releases').deleteMany({
+      _id: { $in: ['demo_consulting_01', 'demo_finance_01'] },
+    });
+    await db.collection('slots').deleteMany({
+      releaseId: { $in: ['demo_consulting_01', 'demo_finance_01'] },
+    });
 
-      await db.collection('releases').insertOne({
-        _id: releaseId,
-        mentorId: 'mentor_rahul',
-        mentorName: 'Rahul Sharma',
-        title: 'Consulting Case Preparation',
-        description:
-          'Practice case interviews, discuss problem-solving approaches, and receive feedback for upcoming management consulting SIP selections (McKinsey, BCG, Bain).',
-        category: 'Management Consulting',
-        releaseAt: releaseAt,
-        status: 'scheduled',
-        createdAt: now.toISOString(),
-        updatedAt: now.toISOString(),
+    // Ensure the two authorized personas exist.
+    const existingMentor = await db.collection('users').findOne({ _id: 'mentor_pgp41' });
+    const existingStudent = await db.collection('users').findOne({ _id: 'student_pgp42' });
+
+    const now = new Date().toISOString();
+    if (!existingMentor) {
+      await db.collection('users').insertOne({
+        _id: 'mentor_pgp41',
+        name: 'Gayathri Arvind',
+        email: 'pgp41@iiml.ac.in',
+        role: 'mentor',
+        createdAt: now,
       });
-
-      await db.collection('slots').insertMany([
-        {
-          _id: 'slot_case_01',
-          releaseId,
-          startTime: '03:00 PM',
-          endTime: '03:30 PM',
-          mode: 'Online (Google Meet)',
-          location: 'Meet link provided after booking',
-          note: 'Profitability framework & live case',
-          isBooked: false,
-          createdAt: now.toISOString(),
-        },
-        {
-          _id: 'slot_case_02',
-          releaseId,
-          startTime: '03:30 PM',
-          endTime: '04:00 PM',
-          mode: 'Online (Google Meet)',
-          location: 'Meet link provided after booking',
-          note: 'Market entry case & guesstimates',
-          isBooked: false,
-          createdAt: now.toISOString(),
-        },
-        {
-          _id: 'slot_case_03',
-          releaseId,
-          startTime: '04:00 PM',
-          endTime: '04:30 PM',
-          mode: 'Online (Google Meet)',
-          location: 'Meet link provided after booking',
-          note: 'M&A and value chain analysis',
-          isBooked: false,
-          createdAt: now.toISOString(),
-        },
-        {
-          _id: 'slot_case_04',
-          releaseId,
-          startTime: '04:30 PM',
-          endTime: '05:00 PM',
-          mode: 'Online (Google Meet)',
-          location: 'Meet link provided after booking',
-          note: 'Unconventional problem-solving & HR questions',
-          isBooked: false,
-          createdAt: now.toISOString(),
-        },
-      ]);
-      console.log('Auto-seeded default Consulting Case Preparation demo release.');
+    } else {
+      await db.collection('users').updateOne(
+        { _id: 'mentor_pgp41' },
+        { $set: { name: 'Gayathri Arvind' } }
+      );
     }
+
+    const releasesWithOldMentorName = await db.collection('releases')
+      .find({ mentorName: { $in: ['Rahul Sharma', 'PGP41'] } });
+    for (const release of await releasesWithOldMentorName.toArray()) {
+      await db.collection('releases').updateOne(
+        { _id: release._id },
+        { $set: { mentorName: 'Gayathri Arvind' } }
+      );
+    }
+    const bookingsWithOldMentorName = await db.collection('bookings')
+      .find({ mentorName: { $in: ['Rahul Sharma', 'PGP41'] } });
+    for (const booking of await bookingsWithOldMentorName.toArray()) {
+      await db.collection('bookings').updateOne(
+        { _id: booking._id },
+        { $set: { mentorName: 'Gayathri Arvind' } }
+      );
+    }
+
+    if (!existingStudent) {
+      await db.collection('users').insertOne({
+        _id: 'student_pgp42',
+        name: 'PGP42',
+        email: 'pgp42@iiml.ac.in',
+        role: 'student',
+        createdAt: now,
+      });
+    }
+
+    // Clean up any legacy old user records
+    await db.collection('users').deleteMany({
+      _id: { $in: ['mentor_rahul', 'student_vaibhav'] },
+    });
+
     _isSeeded = true;
   } catch (err) {
     console.warn('Auto-seed check failed:', err);
@@ -271,7 +280,7 @@ export async function getDatabase(): Promise<{
       await ensureSeed(db);
       return { db, isAtlasOrLocal: true };
     } catch (err) {
-      console.warn('MongoDB connection failed, falling back to memory store:', err);
+      // MongoDB connection failed, fall back to in-memory store
     }
   }
 

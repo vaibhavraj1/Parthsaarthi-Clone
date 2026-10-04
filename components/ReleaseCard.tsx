@@ -12,12 +12,16 @@ interface ReleaseCardProps {
   release: ReleaseWithSlots;
   onBookSlot: (slot: Slot, release: ReleaseWithSlots) => void;
   onRefresh?: () => void;
+  currentStudentId?: string;
+  currentStudentName?: string;
 }
 
 export const ReleaseCard: React.FC<ReleaseCardProps> = ({
   release,
   onBookSlot,
   onRefresh,
+  currentStudentId = 'student_vaibhav',
+  currentStudentName = 'Vaibhav Raj Sahni',
 }) => {
   const isBookable = release.isBookable;
   const releaseTimeDisplay = formatTimeIST(release.releaseAt);
@@ -143,6 +147,8 @@ export const ReleaseCard: React.FC<ReleaseCardProps> = ({
                 slot={slot}
                 isBookable={isBookable}
                 releaseTimeDisplay={releaseTimeDisplay}
+                currentStudentId={currentStudentId}
+                currentStudentName={currentStudentName}
                 onBookNow={(s) => onBookSlot(s, release)}
               />
             ))}
